@@ -34,17 +34,33 @@ if (!class_exists('LW_REGISTRATION_ADMIN_CLASS')) {
 		}
 		
 		private function normalize_pronouns_input($input) {
-			$allowed = array('she','her','he','him','they','them');
+			// Read allowed pronouns directly from LW General Settings (no defaults)
+			$lw_general_settings = get_option('lw_general_settings');
+			$pronouns_options_setting = (isset($lw_general_settings['pronouns_options']) && is_array($lw_general_settings['pronouns_options'])) ? $lw_general_settings['pronouns_options'] : array();
+			$allowed = array_values(array_unique(array_filter(array_map(function($opt){ return strtolower(trim($opt)); }, $pronouns_options_setting), function($t){ return $t !== ''; })));
+		
+			// Normalize input to lowercase tokens
 			if (is_array($input)) {
-				$vals = array_map('strtolower', $input);
+				$vals = array_map(function($v){ return strtolower(trim($v)); }, $input);
 			} else {
 				$vals = preg_split('/[\s,;\/]+/', strtolower(trim((string)$input)));
 			}
 			$vals = array_filter($vals, function($v) use ($allowed) { return in_array($v, $allowed, true); });
 			$vals = array_values(array_unique($vals));
+			// Limit to two tokens to match display style (e.g., "She Ze")
 			$vals = array_slice($vals, 0, 2);
-			$vals = array_map(function($v){ return ucfirst($v); }, $vals);
-			return implode('/', $vals);
+		
+			// Debug logging for testing
+			error_log('[LW Pronouns] Settings allowed=' . json_encode($allowed));
+			error_log('[LW Pronouns] Input raw=' . json_encode($input));
+			error_log('[LW Pronouns] Normalized tokens=' . json_encode($vals));
+		
+			// Use display casing
+			$final = array_map(function($v){ return ucfirst($v); }, $vals);
+			// Join with a space to align with Extended Profile and UI tokens
+			$joined = implode(' ', $final);
+			error_log('[LW Pronouns] Saved value=' . $joined);
+			return $joined;
 		}
 
 		public function lw_profile_fields_callback($user_id){
@@ -223,19 +239,24 @@ wp_register_script( 'lw-select2', $select2_js_url, array( 'jquery' ), strval($se
 wp_enqueue_style( 'lw-select2-css' );
 wp_enqueue_script( 'lw-select2' );
 // Enqueue admin interaction script (input trigger and selection sync)
+// First, set up pronouns options global variable for JavaScript
+$lw_general_settings = get_option('lw_general_settings');
+$pronouns_options = (isset($lw_general_settings['pronouns_options']) && is_array($lw_general_settings['pronouns_options'])) ? $lw_general_settings['pronouns_options'] : array();
+wp_add_inline_script('lw-select2', 'window.lwPronounsOptions = ' . wp_json_encode($pronouns_options) . ';', 'before');
 wp_enqueue_script( 'lw-registration-admin-js', LW_REGISTRATION_ASSETS_URL . '/js/lw_registration_admin.js', array('jquery','lw-select2'), strval(filemtime(plugin_dir_path(__FILE__).'../../assets/js/lw_registration_admin.js')), true );
 // Hide native pronouns <select> and its Select2 container until JS finishes initialization to avoid flash
 wp_add_inline_style('lw-select2-css', 'select.lw-pronouns-select{opacity:0 !important; position:absolute !important; left:-9999px !important; width:1px !important; height:1px !important; pointer-events:none !important;} select.lw-pronouns-select + .select2-container{visibility:hidden !important;}');
 // Initialize Select2 for pronouns (kept existing behavior)
+$lw_general_settings = get_option('lw_general_settings');
 wp_add_inline_script('lw-select2', "jQuery(function($){ if(!$.fn.select2){return;} function initPronouns(ctx){ var $sels=$(ctx).find('select.lw-pronouns-select'); $sels.each(function(){ var $el=$(this); if($el.data('select2')){return;} $el.select2({
  placeholder: $el.attr('data-placeholder')||'Your Pronouns',
  width:'100%',
  closeOnSelect:true,
- maximumSelectionLength:2,
  dropdownParent: $(document.body),
  sorter: function(data){
      if(!Array.isArray(data)) return data;
-     var orderMap = { 'she':0, 'her':1, 'he':2, 'him':3, 'they':4, 'them':5 };
+     var orderArr = " . json_encode(isset($lw_general_settings['pronouns_options']) && is_array($lw_general_settings['pronouns_options']) ? array_values(array_map(function($x){ return strtolower(trim($x)); }, $lw_general_settings['pronouns_options'])) : array()) . ";
+     var orderMap = {}; for(var i=0;i<orderArr.length;i++){ orderMap[orderArr[i]] = i; }
      return data.slice().sort(function(a,b){
          if(!a || !b) return 0;
          var aid = (a.id!=null ? a.id : a.text!=null ? a.text : '');
@@ -248,7 +269,6 @@ wp_add_inline_script('lw-select2', "jQuery(function($){ if(!$.fn.select2){return
      });
  }
 });
- // Show the Select2 container once initialized
  var $cont = $el.next('.select2, .select2-container');
  if(!$cont.length){ try{ $cont = $el.select2('container'); }catch(e){} }
  if($cont && $cont.length){ $cont.css('visibility','visible'); }
@@ -365,5 +385,7 @@ wp_add_inline_script('lw-select2', "jQuery(function($){ if(!$.fn.select2){return
 new LW_REGISTRATION_ADMIN_CLASS();
 
 function lw_print_pronouns_select2_init(){
-    echo '<script>jQuery(function($){ if(!$.fn.select2){return;} function initPronouns(ctx){ var $sels=$(ctx).find("select.lw-pronouns-select"); $sels.each(function(){ var $el=$(this); if($el.data("select2")){return;} $el.select2({ placeholder: $el.attr("data-placeholder")||"Your Pronouns", width:"100%", closeOnSelect:true, maximumSelectionLength:2, sorter: function(data){ var orderMap={she:0,her:1,he:2,him:3,they:4,them:5}; return data.sort(function(a,b){ var ai=orderMap[(a.id||a.text||"").toLowerCase()]; var bi=orderMap[(b.id||b.text||"").toLowerCase()]; if(typeof ai==="undefined") ai=999; if(typeof bi==="undefined") bi=999; return ai-bi; }); } }); }); } initPronouns(document); });</script>';
+    $order = isset($lw_general_settings['pronouns_options']) && is_array($lw_general_settings['pronouns_options']) ? array_values(array_map(function($x){ return strtolower(trim($x)); }, $lw_general_settings['pronouns_options'])) : array();
+    $order_js = json_encode($order);
+    echo '<script>jQuery(function($){ if(!$.fn.select2){return;} function initPronouns(ctx){ var $sels=$(ctx).find("select.lw-pronouns-select"); $sels.each(function(){ var $el=$(this); if($el.data("select2")){return;} var orderArr = '.$order_js.'; var orderMap={}; for(var i=0;i<orderArr.length;i++){ orderMap[orderArr[i]] = i; } $el.select2({ placeholder: $el.attr("data-placeholder")||"Your Pronouns", width:"100%", closeOnSelect:true, sorter: function(data){ return data.sort(function(a,b){ var ai=orderMap[(a.id||a.text||"").toLowerCase()]; var bi=orderMap[(b.id||b.text||"").toLowerCase()]; if(typeof ai==="undefined") ai=999; if(typeof bi==="undefined") bi=999; return ai-bi; }); } }); }); } initPronouns(document); });</script>';
 }

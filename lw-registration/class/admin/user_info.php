@@ -17,10 +17,12 @@ $lw_registration_guardian_mobile_phone = get_user_meta( $user_id, 'lw_registrati
 $lw_contact_you = get_user_meta( $user_id, 'lw_contact_you', true);
 $lw_registration_pronouns = get_user_meta( $user_id, 'lw_registration_pronouns', true);
 $lw_registration_pronouns_ci = strtolower($lw_registration_pronouns);
-$__lw_allowed_pronouns = array('she','her','he','him','they','them');
+$lw_general_settings = get_option('lw_general_settings');
+$pronouns_options_setting = (isset($lw_general_settings['pronouns_options']) && is_array($lw_general_settings['pronouns_options'])) ? $lw_general_settings['pronouns_options'] : array();
+$__lw_allowed_pronouns = array_values(array_unique(array_filter(array_map(function($opt){ return strtolower(trim($opt)); }, $pronouns_options_setting), function($t){ return $t !== ''; })));
 $lw_registration_pronouns_tokens = array_values(array_unique(array_filter(preg_split('/[\s,;\/]+/', $lw_registration_pronouns_ci), function($t) use ($__lw_allowed_pronouns){
     return in_array($t, $__lw_allowed_pronouns, true);
-})));
+}))); 
 $lw_pronouns_order_initial = implode('/', $lw_registration_pronouns_tokens);
 $lw_sibling_spent_time = get_user_meta( $user_id, 'lw_sibling_spent_time', true);
 $lw_form_type= get_user_meta( $user_id, 'lw_form_type', true);
@@ -71,14 +73,19 @@ $lw_state = get_user_meta( $user_id, 'lw_state', true);
             	<th>Pronouns</th>
                 <td>
                     <select name="form_a_lw_registration_pronouns[]" id="form_a_lw_registration_pronouns" class="form-control lw-pronouns-select" multiple data-placeholder="">
-                        <option value="she" <?php echo in_array('she', $lw_registration_pronouns_tokens, true)?'selected':''; ?>>She</option>
-                        <option value="her" <?php echo in_array('her', $lw_registration_pronouns_tokens, true)?'selected':''; ?>>Her</option>
-                        <option value="he" <?php echo in_array('he', $lw_registration_pronouns_tokens, true)?'selected':''; ?>>He</option>
-                        <option value="him" <?php echo in_array('him', $lw_registration_pronouns_tokens, true)?'selected':''; ?>>Him</option>
-                        <option value="they" <?php echo in_array('they', $lw_registration_pronouns_tokens, true)?'selected':''; ?>>They</option>
-                        <option value="them" <?php echo in_array('them', $lw_registration_pronouns_tokens, true)?'selected':''; ?>>Them</option>
+                <?php foreach ($pronouns_options_setting as $opt) { $val = strtolower(trim($opt)); ?>
+                    <option value="<?php echo esc_attr($val); ?>" <?php echo in_array($val, $lw_registration_pronouns_tokens, true)?'selected':''; ?>><?php echo esc_html($opt); ?></option>
+                <?php } ?>
                     </select>
                     <input type="hidden" name="form_a_lw_registration_pronouns_order" value="<?php echo esc_attr(get_user_meta($user_id,'form_a_lw_registration_pronouns_order',true) ?: $lw_pronouns_order_initial); ?>" />
+                    <script>
+                    (function(){
+                        var el = document.getElementById('form_a_lw_registration_pronouns');
+                        if (!el) return;
+                        var opts = Array.prototype.slice.call(el.options).map(function(o){ return { value: o.value, text: o.text, selected: o.selected }; });
+                        // removed debug
+                    })();
+                    </script>
                 </td>
             </tr>
            
@@ -192,14 +199,19 @@ $lw_state = get_user_meta( $user_id, 'lw_state', true);
             <th>Pronouns</th>
             <td>
                 <select name="form_a_lw_registration_pronouns[]" id="form_a_direct_lw_registration_pronouns" class="form-control lw-pronouns-select" multiple data-placeholder="Your Pronouns">
-                    <option value="she" <?php echo in_array('she', $lw_registration_pronouns_tokens, true)?'selected':''; ?>>She</option>
-                    <option value="her" <?php echo in_array('her', $lw_registration_pronouns_tokens, true)?'selected':''; ?>>Her</option>
-                    <option value="he" <?php echo in_array('he', $lw_registration_pronouns_tokens, true)?'selected':''; ?>>He</option>
-                    <option value="him" <?php echo in_array('him', $lw_registration_pronouns_tokens, true)?'selected':''; ?>>Him</option>
-                    <option value="they" <?php echo in_array('they', $lw_registration_pronouns_tokens, true)?'selected':''; ?>>They</option>
-                    <option value="them" <?php echo in_array('them', $lw_registration_pronouns_tokens, true)?'selected':''; ?>>Them</option>
+                <?php foreach ($pronouns_options_setting as $opt) { $val = strtolower(trim($opt)); ?>
+                    <option value="<?php echo esc_attr($val); ?>" <?php echo in_array($val, $lw_registration_pronouns_tokens, true)?'selected':''; ?>><?php echo esc_html($opt); ?></option>
+                <?php } ?>
                 </select>
                 <input type="hidden" name="form_a_lw_registration_pronouns_order" value="<?php echo esc_attr(get_user_meta($user_id,'form_a_lw_registration_pronouns_order',true) ?: $lw_pronouns_order_initial); ?>" />
+                <script>
+                (function(){
+                    var el = document.getElementById('form_a_direct_lw_registration_pronouns');
+                    if (!el) return;
+                    var opts = Array.prototype.slice.call(el.options).map(function(o){ return { value: o.value, text: o.text, selected: o.selected }; });
+                    // removed debug
+                })();
+                </script>
             </td>
         </tr>
            
@@ -304,14 +316,19 @@ $lw_state = get_user_meta( $user_id, 'lw_state', true);
             	<th>Pronouns</th>
                 <td>
                     <select name="form_b_lw_registration_pronouns[]" id="form_b_lw_registration_pronouns" class="form-control lw-pronouns-select" multiple data-placeholder="Your Pronouns">
-                        <option value="she" <?php echo in_array('she', $lw_registration_pronouns_tokens, true)?'selected':''; ?>>She</option>
-                        <option value="her" <?php echo in_array('her', $lw_registration_pronouns_tokens, true)?'selected':''; ?>>Her</option>
-                        <option value="he" <?php echo in_array('he', $lw_registration_pronouns_tokens, true)?'selected':''; ?>>He</option>
-                        <option value="him" <?php echo in_array('him', $lw_registration_pronouns_tokens, true)?'selected':''; ?>>Him</option>
-                        <option value="they" <?php echo in_array('they', $lw_registration_pronouns_tokens, true)?'selected':''; ?>>They</option>
-                        <option value="them" <?php echo in_array('them', $lw_registration_pronouns_tokens, true)?'selected':''; ?>>Them</option>
-                    </select>
-                    <input type="hidden" name="form_b_lw_registration_pronouns_order" value="<?php echo esc_attr(get_user_meta($user_id,'form_b_lw_registration_pronouns_order',true)); ?>" />
+                <?php foreach ($pronouns_options_setting as $opt) { $val = strtolower(trim($opt)); ?>
+                    <option value="<?php echo esc_attr($val); ?>" <?php echo in_array($val, $lw_registration_pronouns_tokens, true)?'selected':''; ?>><?php echo esc_html($opt); ?></option>
+                <?php } ?>
+                </select>
+                <input type="hidden" name="form_b_lw_registration_pronouns_order" value="<?php echo esc_attr(get_user_meta($user_id,'form_b_lw_registration_pronouns_order',true) ?: $lw_pronouns_order_initial); ?>" />
+                <script>
+                (function(){
+                    var el = document.getElementById('form_b_lw_registration_pronouns');
+                    if (!el) return;
+                    var opts = Array.prototype.slice.call(el.options).map(function(o){ return { value: o.value, text: o.text, selected: o.selected }; });
+                    // removed debug
+                })();
+                </script>
                 </td>
             </tr>
           
@@ -349,15 +366,20 @@ $lw_state = get_user_meta( $user_id, 'lw_state', true);
             <th>Pronouns</th>
             <td>
                 <select name="form_c_lw_registration_pronouns[]" id="form_c_lw_registration_pronouns" class="form-control lw-pronouns-select" multiple data-placeholder="Your Pronouns">
-                    <option value="she" <?php echo in_array('she', $lw_registration_pronouns_tokens, true)?'selected':''; ?>>She</option>
-                    <option value="her" <?php echo in_array('her', $lw_registration_pronouns_tokens, true)?'selected':''; ?>>Her</option>
-                    <option value="he" <?php echo in_array('he', $lw_registration_pronouns_tokens, true)?'selected':''; ?>>He</option>
-                    <option value="him" <?php echo in_array('him', $lw_registration_pronouns_tokens, true)?'selected':''; ?>>Him</option>
-                    <option value="they" <?php echo in_array('they', $lw_registration_pronouns_tokens, true)?'selected':''; ?>>They</option>
-                    <option value="them" <?php echo in_array('them', $lw_registration_pronouns_tokens, true)?'selected':''; ?>>Them</option>
+                <?php foreach ($pronouns_options_setting as $opt) { $val = strtolower(trim($opt)); ?>
+                    <option value="<?php echo esc_attr($val); ?>" <?php echo in_array($val, $lw_registration_pronouns_tokens, true)?'selected':''; ?>><?php echo esc_html($opt); ?></option>
+                <?php } ?>
                 </select>
-                <input type="hidden" name="form_c_lw_registration_pronouns_order" value="<?php echo esc_attr(get_user_meta($user_id,'form_c_lw_registration_pronouns_order',true)); ?>" />
-            </td>
+                <input type="hidden" name="form_c_lw_registration_pronouns_order" value="<?php echo esc_attr(get_user_meta($user_id,'form_c_lw_registration_pronouns_order',true) ?: $lw_pronouns_order_initial); ?>" />
+                <script>
+                (function(){
+                    var el = document.getElementById('form_c_lw_registration_pronouns');
+                    if (!el) return;
+                    var opts = Array.prototype.slice.call(el.options).map(function(o){ return { value: o.value, text: o.text, selected: o.selected }; });
+                    // removed debug
+                })();
+                </script>
+                </td>
             </tr>
           
             
@@ -485,24 +507,33 @@ $lw_state = get_user_meta( $user_id, 'lw_state', true);
                 var $visible = jQuery(selector);
                 $visible.show().find('input,select,textarea').prop('disabled', false);
             }
-            console.log('lw_form_type', lw_form_type);
+            
             initPronounsOrderForVisible();
         }
         
     
         function initPronounsOrderForVisible(){
-            var allowed = ['she','her','he','him','they','them'];
+            var allowed = <?php echo json_encode($__lw_allowed_pronouns); ?>;
             jQuery('select.lw-pronouns-select:visible').each(function(){
                 var $sel = jQuery(this);
                 var hiddenName = ($sel.attr('name')||'').replace('[]','_order');
                 var orderStr = jQuery('input[name="'+hiddenName+'"]').val() || '';
-                var order = (orderStr ? orderStr.split('/') : ($sel.val()||[]))
-                    .map(function(s){ return String(s||'').trim().toLowerCase(); })
-                    .filter(function(v){ return allowed.indexOf(v) > -1; });
-                console.log('initPronouns hidden', hiddenName, orderStr);
+                var normalize = function(s){ return String(s||'').trim().toLowerCase(); };
+                var selected = ($sel.val()||[]).map(normalize).filter(function(v){ return allowed.indexOf(v) > -1; });
+                var order = [];
+                if(orderStr){
+                    var orderTokens = orderStr.split('/').map(normalize).filter(function(v){ return allowed.indexOf(v) > -1; });
+                    var covers = selected.every(function(s){ return orderTokens.indexOf(s) > -1; });
+                    order = covers ? orderTokens : selected;
+                } else {
+                    order = selected;
+                }
+                // Debug: verify selection/order resolution
+                if(window.console && console.debug){ console.debug('[LW Pronouns] allowed=', allowed, 'selected=', selected, 'orderStr=', orderStr, 'finalOrder=', order); }
                 $sel.val(order).trigger('change');
                 $sel.data('lwPronounOrder', order.slice());
-                console.log('initPronouns order', $sel.attr('id'), order);
+                // Ensure hidden order is synced immediately
+                updateHiddenPronounsOrder();
             });
         }
         
@@ -513,14 +544,13 @@ $lw_state = get_user_meta( $user_id, 'lw_state', true);
         
     
         function updateHiddenPronounsOrder(){
-            var allowed = ['she','her','he','him','they','them'];
+            var allowed = <?php echo json_encode($__lw_allowed_pronouns); ?>;
             jQuery('select.lw-pronouns-select:visible').each(function(){
                 var $sel = jQuery(this);
                 var order = $sel.data('lwPronounOrder') || ($sel.val()||[]);
                 order = order.filter(function(v){ return allowed.indexOf(v) > -1; });
                 var hiddenName = ($sel.attr('name')||'').replace('[]','_order');
                 jQuery('input[name="'+hiddenName+'"]').val(order.join('/'));
-                console.log('updateHidden', hiddenName, order.join('/'));
             });
         }
         
@@ -534,11 +564,9 @@ $lw_state = get_user_meta( $user_id, 'lw_state', true);
                 setPronounsOrderWhenReady._attempts = attempts + 1;
                 setTimeout(setPronounsOrderWhenReady, 200);
             }
-            console.log('setPronouns attempt', attempts, anyMissing);
         }
         
         jQuery(document).ready(function(){
-            console.log('ready');
             showLWRegistrationFields();
             setTimeout(setPronounsOrderWhenReady, 0);
         });
@@ -548,7 +576,7 @@ $lw_state = get_user_meta( $user_id, 'lw_state', true);
         });
         
         jQuery(document).on('select2:select','select.lw-pronouns-select',function(e){
-            var allowed = ['she','her','he','him','they','them'];
+            var allowed = <?php echo json_encode($__lw_allowed_pronouns); ?>;
             var id = String((e.params && e.params.data && e.params.data.id) || '').toLowerCase();
             if(allowed.indexOf(id) === -1){ return; }
             var $sel = jQuery(this);
@@ -557,7 +585,6 @@ $lw_state = get_user_meta( $user_id, 'lw_state', true);
             $sel.data('lwPronounOrder', order);
             $sel.val(order).trigger('change');
             updateHiddenPronounsOrder();
-            console.log('select', $sel.attr('id'), order);
         });
         jQuery(document).on('select2:unselect','select.lw-pronouns-select',function(e){
             var id = String((e.params && e.params.data && e.params.data.id) || '').toLowerCase();
@@ -565,83 +592,8 @@ $lw_state = get_user_meta( $user_id, 'lw_state', true);
             var order = $sel.data('lwPronounOrder') || [];
             $sel.data('lwPronounOrder', order.filter(function(v){ return v !== id; }));
             updateHiddenPronounsOrder();
-            console.log('unselect', $sel.attr('id'), $sel.data('lwPronounOrder'));
         });
         jQuery(document).on('change','select.lw-pronouns-select',function(){
             updateHiddenPronounsOrder();
-        });
-        </script>
-        <script>
-        jQuery(function($){
-            function normalizeOrder(raw) {
-                if (!raw) return [];
-                return String(raw).split(/[,\s\/;]+/).map(function(s){return s.trim();}).filter(Boolean);
-            }
-            function reorderOptions($sel, order) {
-                var map = {};
-                for (var i=0;i<order.length;i++) map[order[i]] = true;
-                for (var j=0;j<order.length;j++) {
-                    var val = order[j];
-                    var $opt = $sel.find('option[value="'+val+'"]');
-                    if ($opt.length) {
-                        $opt.detach();
-                        $sel.append($opt);
-                    }
-                }
-            }
-            function applyOrder($sel, order) {
-                var selected = $sel.val() || [];
-                var desired = [];
-                for (var i=0;i<order.length;i++) if (selected.indexOf(order[i]) !== -1) desired.push(order[i]);
-                for (var j=0;j<selected.length;j++) if (desired.indexOf(selected[j]) === -1) desired.push(selected[j]);
-                reorderOptions($sel, desired);
-                $sel.val(desired).trigger('change.select2');
-                $sel.data('lwPronounOrder', desired.slice());
-                var $hidden = $sel.closest('td').find('input[name$="_lw_registration_pronouns_order"]');
-                if ($hidden.length) $hidden.val(desired.join('/'));
-            }
-            function initPronounsOrderForVisible() {
-                var $sel = $('select.lw-pronouns-select:visible');
-                if (!$sel.length) return;
-                var $hidden = $sel.closest('td').find('input[name$="_lw_registration_pronouns_order"]');
-                var hiddenOrder = normalizeOrder($hidden.length ? $hidden.val() : '');
-                var cacheOrder = $sel.data('lwPronounOrder') || [];
-                var useOrder = hiddenOrder.length ? hiddenOrder : cacheOrder;
-                applyOrder($sel, useOrder);
-            }
-            $(document).on('select2:select', 'select.lw-pronouns-select', function(e){
-                var $sel = $(this);
-                var order = $sel.data('lwPronounOrder') || [];
-                var val = e.params && e.params.data ? e.params.data.id : null;
-                if (val) {
-                    order = order.filter(function(x){return x !== val;});
-                    order.push(val);
-                    applyOrder($sel, order);
-                }
-            });
-            $(document).on('select2:unselect', 'select.lw-pronouns-select', function(e){
-                var $sel = $(this);
-                var order = $sel.data('lwPronounOrder') || [];
-                var val = e.params && e.params.data ? e.params.data.id : null;
-                if (val) {
-                    order = order.filter(function(x){return x !== val;});
-                    applyOrder($sel, order);
-                }
-            });
-            $(document).on('change', 'select.lw-pronouns-select', function(){
-                var $sel = $(this);
-                var selected = $sel.val() || [];
-                var order = $sel.data('lwPronounOrder') || [];
-                var merged = [];
-                for (var i=0;i<order.length;i++) if (selected.indexOf(order[i]) !== -1) merged.push(order[i]);
-                for (var j=0;j<selected.length;j++) if (merged.indexOf(selected[j]) === -1) merged.push(selected[j]);
-                applyOrder($sel, merged);
-            });
-            $(document).ready(function(){
-                initPronounsOrderForVisible();
-            });
-            $('#lw_form_type').on('change', function(){
-                setTimeout(initPronounsOrderForVisible, 0);
-            });
         });
         </script>

@@ -1,3 +1,4 @@
+<?php $lw_general_settings = get_option('lw_general_settings'); ?>
 <div class="lw-width50 lw-white-bg">
    <div class="lw-forma-wrapper lw-form-frame" id="lw-rego-form-known-to-wishgranting">
       <div class="lw-form-frame-inner">
@@ -18,12 +19,12 @@
                <div class="lw-form-group">
                      <label>Your Pronouns <div class="lw-tooltip">?<span class="lw-tooltiptext">Pronouns are what we use to refer to a person other than their name, such as They, She and He. Feel free to share your pronouns here</span></div></label>
                      <select name="lw_registration_pronouns[]" class="lw-pronouns-select" multiple data-placeholder="Your Pronouns">
-                        <option value="She">She</option>
-                        <option value="Her">Her</option>
-                        <option value="He">He</option>
-                        <option value="Him">Him</option>
-                        <option value="They">They</option>
-                        <option value="Them">Them</option>
+                        <?php 
+                        $pronouns_options = (isset($lw_general_settings['pronouns_options']) && is_array($lw_general_settings['pronouns_options'])) ? $lw_general_settings['pronouns_options'] : array('She','Her','He','Him','They','Them');
+                        foreach ($pronouns_options as $opt) {
+                            echo '<option value="'.esc_attr($opt).'">'.esc_html($opt).'</option>';
+                        }
+                        ?>
                      </select>
                </div>
                     
@@ -129,3 +130,5 @@
       </div>
    </div>
 </div>
+
+<?php $lw_general_settings = get_option('lw_general_settings'); ?>
