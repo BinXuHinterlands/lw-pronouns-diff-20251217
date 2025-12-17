@@ -318,7 +318,12 @@ jQuery(function($){
 
     var syncInput = function(){
       var vals = $el.val() || [];
-      var displayMap = { she: 'She', her: 'Her', he: 'He', him: 'Him', they: 'They', them: 'Them' };
+      // Get display mapping from LW General Settings
+      var pronounsOptions = window.lwPronounsOptions || [];
+      var displayMap = {};
+      pronounsOptions.forEach(function(pronoun){
+        displayMap[pronoun.toLowerCase()] = pronoun;
+      });
       var text = vals.map(function(v){ return displayMap[v] || v; }).join('/');
       log('syncInput values', vals, 'text', text);
       $input.val(text);
@@ -474,17 +479,14 @@ jQuery(function($){
     if($input.data('lwPronounsInjected')){ return; }
     $input.data('lwPronounsInjected', true);
 
-    // Build the select element with allowed pronouns
+    // Build the select element with allowed pronouns from LW General Settings
     var $sel = jQuery('<select multiple class="form-control lw-pronouns-select" data-placeholder="Your Pronouns" />');
-    var opts = [
-      { val: 'she',  text: 'She' },
-      { val: 'her',  text: 'Her' },
-      { val: 'he',   text: 'He' },
-      { val: 'him',  text: 'Him' },
-      { val: 'they', text: 'They' },
-      { val: 'them', text: 'Them' }
-    ];
-    opts.forEach(function(o){ $sel.append('<option value="'+o.val+'">'+o.text+'</option>'); });
+    // Get pronouns options from global variable set by PHP
+    var pronounsOptions = window.lwPronounsOptions || [];
+    pronounsOptions.forEach(function(pronoun){
+      var val = pronoun.toLowerCase();
+      $sel.append('<option value="'+val+'">'+pronoun+'</option>');
+    });
 
     // Insert select after the input, initialize behaviors, and sync values
     $sel.insertAfter($input);
@@ -495,23 +497,29 @@ jQuery(function($){
     // Preselect based on current input value (supports formats like "She/Her", "She, Her", etc.)
     var raw = ($input.val() || '').toLowerCase();
     var tokens = raw.split(/[\s,;\/]+/).filter(function(t){ return !!t; });
-    var allowed = ['she','her','he','him','they','them'];
+    // Get allowed pronouns from LW General Settings
+    var allowed = (window.lwPronounsOptions || []).map(function(p){ return p.toLowerCase(); });
     var vals = [];
     tokens.forEach(function(t){ if(allowed.indexOf(t) !== -1 && vals.indexOf(t) === -1){ vals.push(t); } });
     if(vals.length > 2){ vals = vals.slice(0,2); }
     if(vals.length){ $sel.val(vals).trigger('change'); }
 
     // Wire up the input to open/select and keep synced
-    try {
-      setupInputForSelect($input, $sel, 0);
-    } catch(e){ /* if helper failed, ensure at least syncing happens */
-      $sel.on('change.lwPronounsFallback', function(){
-        var displayMap = { she: 'She', her: 'Her', he: 'He', him: 'Him', they: 'They', them: 'Them' };
-        var v = ($sel.val()||[]).map(function(x){ return displayMap[x] || x; }).join('/');
-        $input.val(v);
-      });
-      $sel.trigger('change');
-    }
+      try {
+        setupInputForSelect($input, $sel, 0);
+      } catch(e){ /* if helper failed, ensure at least syncing happens */
+        $sel.on('change.lwPronounsFallback', function(){
+          // Get display mapping from LW General Settings
+          var pronounsOptions = window.lwPronounsOptions || [];
+          var displayMap = {};
+          pronounsOptions.forEach(function(pronoun){
+            displayMap[pronoun.toLowerCase()] = pronoun;
+          });
+          var v = ($sel.val()||[]).map(function(x){ return displayMap[x] || x; }).join('/');
+          $input.val(v);
+        });
+        $sel.trigger('change');
+      }
 
     // Retry once after a short delay to catch late-rendered admin form
     setTimeout(function(){

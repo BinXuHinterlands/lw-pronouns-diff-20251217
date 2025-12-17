@@ -106,6 +106,11 @@ if (!class_exists('LW_REGISTRATION_FRONT_CLASS')) {
                 $child_profile_edit_js_ver  = file_exists( $child_profile_edit_js_path ) ? filemtime( $child_profile_edit_js_path ) : time();
                 wp_enqueue_script( 'buddyboss-child-profile-edit', get_stylesheet_directory_uri() . '/js/profile-edit.js', array( 'jquery', 'select2' ), strval( $child_profile_edit_js_ver ), true );
 
+                // Provide Pronouns Options to front-end JS
+                $pronouns_options = ( isset( $lw_general_settings['pronouns_options'] ) && is_array( $lw_general_settings['pronouns_options'] ) ) ? $lw_general_settings['pronouns_options'] : array( 'She', 'Her', 'He', 'Him', 'They', 'Them' );
+                $pronouns_options = array_values( array_unique( array_filter( array_map( 'trim', $pronouns_options ) ) ) );
+                wp_add_inline_script( 'buddyboss-child-profile-edit', 'window.lwPronounsOptions = ' . wp_json_encode( $pronouns_options ) . ';', 'before' );
+
                 if($pageId==$lw_general_settings['registration'] || $pageId==$lw_general_settings['direct_starlight_registration']){
                     $site_key = get_option('recaptcha_site_key');
                     if (!empty($site_key)) {
@@ -290,8 +295,13 @@ if (!class_exists('LW_REGISTRATION_FRONT_CLASS')) {
 					$cc_email_address[$lw_general_settings['cc_cmail_recipient']] = $lw_general_settings['cc_cmail_recipient'];
 				}
 				$birthday_string = $postData['lw_birthday_month'].$postData['lw_birthday_day'];
-				// Pronoun normalization and enforcement: allow up to two unique selections from predefined list
-				$pronouns_allowed = array('she','her','he','him','they','them');
+				// Pronoun normalization based on settings (no default, no max limit)
+				$pronouns_options_setting = (isset($lw_general_settings['pronouns_options']) && is_array($lw_general_settings['pronouns_options'])) ? $lw_general_settings['pronouns_options'] : array();
+				$pronouns_allowed = array();
+				foreach ($pronouns_options_setting as $opt) {
+					$t = strtolower(trim($opt));
+					if ($t !== '') { $pronouns_allowed[] = $t; }
+				}
 				$pronouns_input = isset($postData['lw_registration_pronouns']) ? $postData['lw_registration_pronouns'] : array();
 				if (!is_array($pronouns_input)) {
 					$pronouns_input = $pronouns_input !== '' ? array($pronouns_input) : array();
@@ -303,16 +313,9 @@ if (!class_exists('LW_REGISTRATION_FRONT_CLASS')) {
 						$pronouns_normalized[] = $p_l;
 					}
 				}
-				if (count($pronouns_normalized) > 2) {
-					echo json_encode(array("message"=>"Please select up to two pronouns only.",'status'=>0));
-					exit;
-				}
 				$pronouns_value = '';
 				if (count($pronouns_normalized) > 0) {
-					$pronouns_value = ucfirst($pronouns_normalized[0]);
-					if (count($pronouns_normalized) == 2) {
-						$pronouns_value .= '/' . ucfirst($pronouns_normalized[1]);
-					}
+					$pronouns_value = implode('/', array_map(function($v){ return ucfirst($v); }, $pronouns_normalized));
 				}
 				if($lw_form_type=="form_a"){
 					$redirect= get_the_permalink($lw_general_settings['redirect_registration_known_to_starlight']);
@@ -502,9 +505,9 @@ if (!class_exists('LW_REGISTRATION_FRONT_CLASS')) {
 						update_user_meta($user_id,$k,$v);
 						
 					}
-					// 同步到 Extended Profile 的 Pronouns 字段，保持两处一致
-					if (function_exists('xprofile_set_field_data')) {
-					    $pronouns_field_id = function_exists('xprofile_get_field_id_from_name') ? xprofile_get_field_id_from_name('Pronouns') : 0;
+					// Sync Pronouns to Extended Profile to keep consistency
+						if (function_exists('xprofile_set_field_data')) {
+					    $pronouns_field_id = function_exists('xprofile_get_field_id_from_name') ? intval(xprofile_get_field_id_from_name('Pronouns')) : 0;
 					    if (!empty($pronouns_field_id) && !empty($pronouns_value)) {
 					        xprofile_set_field_data($pronouns_field_id, $user_id, $pronouns_value);
 					    }

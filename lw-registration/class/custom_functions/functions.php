@@ -314,10 +314,13 @@ function lw_profile_sync_wp_profile( $user_id, $posted_field_ids, $errors, $old_
 	        $raw = isset($new_value['value']) ? $new_value['value'] : '';
 	        $tokens = is_array($raw) ? $raw : preg_split('/[\s,;\/]+/', strtolower(trim((string)$raw)));
 	        $tokens = array_map('strtolower', $tokens);
-	        $allowed = array('she','her','he','him','they','them');
+	        $lw_general_settings = get_option('lw_general_settings');
+	        $pronouns_options_setting = (isset($lw_general_settings['pronouns_options']) && is_array($lw_general_settings['pronouns_options'])) ? $lw_general_settings['pronouns_options'] : array();
+	        $allowed = array_values(array_unique(array_filter(array_map(function($opt){ return strtolower(trim($opt)); }, $pronouns_options_setting), function($t){ return $t !== ''; })));
+	        if (empty($allowed)) { $allowed = array('she','her','he','him','they','them'); }
 	        $tokens = array_values(array_unique(array_filter($tokens, function($t) use ($allowed){ return in_array($t, $allowed, true); })));
 	        $tokens = array_slice($tokens, 0, 2);
-	        $normalized = implode('/', array_map(function($t){ return ucfirst($t); }, $tokens));
+	        $normalized = implode(' ', array_map(function($t){ return ucfirst($t); }, $tokens));
 	        update_user_meta( $user_id, 'lw_registration_pronouns', $normalized );
 	    }
 	}

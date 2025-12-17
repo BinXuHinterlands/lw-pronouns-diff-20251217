@@ -10,12 +10,42 @@ foreach ($loop->posts as $single) {
 }
 
 if (isset($_REQUEST['lw_general_settings_submit']) && $_REQUEST['lw_general_settings_submit'] !== "") {
-    update_option('lw_general_settings', $_REQUEST['lw_general_settings']);
-	$message= __('Settings successfully updated.', 'lw');
-
+    $settings = isset($_REQUEST['lw_general_settings']) ? $_REQUEST['lw_general_settings'] : array();
+    // Normalize pronouns options from comma-separated string to array
+    if (isset($settings['pronouns_options'])) {
+        if (is_string($settings['pronouns_options'])) {
+            $pronouns_arr = array_map('trim', explode(',', $settings['pronouns_options']));
+            // Remove empty values and duplicates while preserving order
+            $pronouns_arr = array_values(array_filter($pronouns_arr, function($v){ return $v !== ''; }));
+            $seen = array();
+            $normalized = array();
+            foreach ($pronouns_arr as $p) {
+                $key = strtolower($p);
+                if (!isset($seen[$key])) {
+                    $normalized[] = $p; // keep original case for display
+                    $seen[$key] = true;
+                }
+            }
+            $settings['pronouns_options'] = $normalized;
+        }
+    }
+    // Enforce minimum pronouns count (>= 2) and default fallback
+    $default_pronouns = array('She', 'Her');
+    if (!isset($settings['pronouns_options']) || !is_array($settings['pronouns_options']) || count($settings['pronouns_options']) < 2) {
+        $error_message = __('Please enter at least two pronouns. Default "She, Her" has been applied.', 'lw_registration');
+        $settings['pronouns_options'] = $default_pronouns;
+    }
+    // Removed pronouns_max enforcement; no longer used
+    update_option('lw_general_settings', $settings);
+    $message= __('Settings successfully updated.', 'lw');
 }
 $lw_general_settings = get_option('lw_general_settings');
 $lw_registration_email_settings  = get_option('lw_registration_email_settings');
+// Ensure default pronouns exist for display if option is missing or invalid
+$default_pronouns = array('She', 'Her');
+if (!isset($lw_general_settings['pronouns_options']) || !is_array($lw_general_settings['pronouns_options']) || count($lw_general_settings['pronouns_options']) < 2) {
+    $lw_general_settings['pronouns_options'] = $default_pronouns;
+}
 
 
 $emailList=array
@@ -59,6 +89,14 @@ if(isset($message) && $message!=""){
 ?>
 <div class="updated notice notice-success  mb-2" id="message" style="margin-left:0px">
   <p><?php echo $message; ?></p>
+</div>
+<?php
+}
+// Show validation error if pronouns count was less than 2
+if(isset($error_message) && $error_message!=""){
+?>
+<div class="notice notice-error mb-2" style="margin-left:0px">
+  <p><?php echo esc_html($error_message); ?></p>
 </div>
 <?php
 }
@@ -141,7 +179,7 @@ if(isset($message) && $message!=""){
 									$selected="selected='selected'" ; 
 								} 
 								echo '<option value="'.$single_page['id'].'" '.$selected.'>'.$single_page['title'].' (Page ID: '.$single_page['id'].')</option>'; 
-							} ?>
+								} ?>
 						</select>
 					</div>
 				</div>
@@ -168,7 +206,7 @@ if(isset($message) && $message!=""){
 									$selected="selected='selected'" ; 
 								} 
 								echo '<option value="'.$single_page['id'].'" '.$selected.'>'.$single_page['title'].' (Page ID: '.$single_page['id'].')</option>'; 
-							} ?>
+								} ?>
 						</select>
 						<small class="form-text text-muted">Select a page to display when Direct Starlight Registration is disabled. If no page is selected, the default message will be shown. You can create a new page with your custom content and select it here.</small>
 					</div>
@@ -249,23 +287,20 @@ if(isset($message) && $message!=""){
 						<input type="email" name="lw_general_settings[cc_cmail_recipient]" value="<?php echo isset($lw_general_settings['cc_cmail_recipient'])?$lw_general_settings['cc_cmail_recipient']:""; ?>" id="cc_cmail_recipient"  class="form-control email"/>
 					</div>
           		</div>
-               
-                <div class="col-md-12">
-           			<div class="form-group">
-						<label for="known_to_stl_registration_expired_hours" class="invitation_label"><?php echo __('known to STL Registration Access Expired Hours', 'lw_registration'); ?></label>
-						<input type="number" name="lw_general_settings[known_to_stl_registration_expired_hours]" value="<?php echo isset($lw_general_settings['known_to_stl_registration_expired_hours'])?$lw_general_settings['known_to_stl_registration_expired_hours']:""; ?>" id="known_to_stl_registration_expired_hours"  class="form-control number"/>
-					</div>
+
+				<hr style="width: 100%; border-color: #ccc;">
+          		
+          		<!-- New: Pronouns configuration fields -->
+          		<div class="col-md-12">
+          			<div class="form-group">
+          				<label class="invitation_label"><?php echo __('Pronouns Options', 'lw_registration'); ?></label>
+          				<input type="text" name="lw_general_settings[pronouns_options]" value="<?php 
+           					$pronouns_display = (isset($lw_general_settings['pronouns_options']) && is_array($lw_general_settings['pronouns_options'])) ? implode(', ', $lw_general_settings['pronouns_options']) : 'She, Her';
+           					echo esc_attr($pronouns_display); ?>" class="form-control"/>
+           				<small class="form-text text-muted"><?php echo __('Enter pronouns separated by commas (at least 2 required). Example: She, Her, He, Him, They, Them. If left empty or fewer than 2, default "She, Her" will be used.', 'lw_registration'); ?></small>
+          			</div>
           		</div>
-
-                <div class="col-md-12">
-                    <div class="form-group">
-                        <label for="lw_contact_you" class="invitation_label">"Anything we need to know before we contact your emergency contact?" Word Limitation </label>
-                        <input type="number" name="lw_general_settings[lw_contact_you]" value="<?php echo isset($lw_general_settings['lw_contact_you'])?$lw_general_settings['lw_contact_you']:""; ?>" id="lw_contact_you"  class="form-control number"/>
-                    </div>
-                </div>
-                
-                
-
+          		
 
             </div>
             
